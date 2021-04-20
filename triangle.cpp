@@ -14,14 +14,12 @@
 namespace {
 	const int window_width = 800;
 	const int window_height = 600;
-
-	const float triangle_height = 0.5f;
-	float triangle_width;
 }
-
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void process_input(GLFWwindow* window);
+void draw_triangle(glm::vec3* vertices, Shader shader, glm::mat4 mvp);
+glm::vec3 get_translation_vector(glm::vec3* vertices, int index);
 
 int main(int argc, char** argv)
 {
@@ -53,19 +51,23 @@ int main(int argc, char** argv)
 	}
 
 	glViewport(0, 0, window_width, window_height);
-
 	glEnable(GL_DEPTH_TEST);
 
 	Shader shader("shaders/triangle.vert", "shaders/triangle.frag");
 
-	float vertices[]
-	{
-		0.0f, 0.25f, 0.0f, 1.0f, 0.2f, 0.2f, // top point
-		-0.25f, -0.25f, 0.0f, 0.2f, 1.0f, 0.2f, // left point
-		0.25f, -0.25f, 0.0f, 0.2f, 0.2f, 1.0f // right point
-	};
+	/* float vertices[] */
+	/* { */
+	/* 	0.0f, 0.25f, 0.0f, 1.0f, 0.2f, 0.2f, // top point */
+	/* 	-0.25f, -0.25f, 0.0f, 0.2f, 1.0f, 0.2f, // left point */
+	/* 	0.25f, -0.25f, 0.0f, 0.2f, 0.2f, 1.0f // right point */
+	/* }; */
 
-	triangle_width = tan(30 * PI/180) * triangle_height * 2;
+	glm::vec3 vertices[]
+	{
+		glm::vec3(0.0f, 0.25f, 0.0f),
+		glm::vec3(-0.25f, -0.25f, 0.0f),
+		glm::vec3(0.25f, -0.25f, 0.0f)
+	};
 
 	unsigned int VAO, VBO;
 	glGenVertexArrays(1, &VAO);
@@ -76,24 +78,46 @@ int main(int argc, char** argv)
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*) (3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	/* glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*) (3 * sizeof(float))); */
+	/* glEnableVertexAttribArray(1); */
 
 	glm::mat4 mvp = glm::mat4(1.0f);
 
+
+
 	shader.use();
-	shader.setMat4("mvp", mvp);
 
 	while(!glfwWindowShouldClose(window))
 	{
+		int triangle_depth = 5;
+
 		process_input(window);
 
-		glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		draw_triangle(vertices, shader, mvp);
+
+		for (int i = 0; i < 3; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, get_translation_vector(vertices, i));
+			model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+
+			draw_triangle(vertices, shader, model);
+			for (int j = 0; j < 3; j++)
+			{
+				glm::mat4 model = glm::mat4(1.0f);
+				model = glm::translate(model, get_translation_vector(vertices, i));
+				model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+				model = glm::translate(model, get_translation_vector(vertices, j));
+				model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+
+				draw_triangle(vertices, shader, model);
+			}
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -119,4 +143,32 @@ void process_input(GLFWwindow* window)
 	{ 
 		glfwSetWindowShouldClose(window, true);
 	}
+}
+
+void draw_triangle(glm::vec3* vertices, Shader shader, glm::mat4 mvp)
+{
+	shader.setMat4("mvp", mvp);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+glm::vec3 get_translation_vector(glm::vec3* vertices, int index)
+{
+	glm::vec3 translation_vector = glm::vec3(0.0f);
+
+	if (index == 0)
+	{
+		translation_vector.x = (vertices[1].x + vertices[2].x - vertices[0].x)/2;
+		translation_vector.y = (vertices[1].y + vertices[2].y - vertices[0].y)/2;
+	}
+	else if (index == 1)
+	{
+		translation_vector.x = (vertices[0].x + vertices[2].x - vertices[1].x)/2;
+		translation_vector.y = (vertices[0].y + vertices[2].y - vertices[1].y)/2;
+	}
+	else if (index == 2)
+	{
+		translation_vector.x = (vertices[0].x + vertices[1].x - vertices[2].x)/2;
+		translation_vector.y = (vertices[0].y + vertices[1].y - vertices[2].y)/2;
+	}
+	return translation_vector;
 }
