@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdlib.h>
 #include <cmath>
 
 #include "glad/glad.h"
@@ -14,15 +15,20 @@
 namespace {
 	const int window_width = 800;
 	const int window_height = 600;
+
+	const int max_depth = 8;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void process_input(GLFWwindow* window);
 void draw_triangle(glm::vec3* vertices, Shader shader, glm::mat4 mvp);
 glm::vec3 get_translation_vector(glm::vec3* vertices, int index);
+void draw_sierpinski_triangle(glm::vec3* vertices, Shader shader, glm::mat4 in_model, int depth);
 
 int main(int argc, char** argv)
 {
+	srand(time(NULL));
+
 	if (!glfwInit())
 	{
 		std::cout << "GLFW initialization failed" << std::endl;
@@ -64,9 +70,9 @@ int main(int argc, char** argv)
 
 	glm::vec3 vertices[]
 	{
-		glm::vec3(0.0f, 0.25f, 0.0f),
-		glm::vec3(-0.25f, -0.25f, 0.0f),
-		glm::vec3(0.25f, -0.25f, 0.0f)
+		glm::vec3(0.0f, 0.95f, 0.0f),
+		glm::vec3(-0.45f, 0.05f, 0.0f),
+		glm::vec3(0.45f, 0.05f, 0.0f)
 	};
 
 	unsigned int VAO, VBO;
@@ -83,10 +89,6 @@ int main(int argc, char** argv)
 	/* glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*) (3 * sizeof(float))); */
 	/* glEnableVertexAttribArray(1); */
 
-	glm::mat4 mvp = glm::mat4(1.0f);
-
-
-
 	shader.use();
 
 	while(!glfwWindowShouldClose(window))
@@ -98,26 +100,8 @@ int main(int argc, char** argv)
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		draw_triangle(vertices, shader, mvp);
-
-		for (int i = 0; i < 3; i++)
-		{
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, get_translation_vector(vertices, i));
-			model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
-
-			draw_triangle(vertices, shader, model);
-			for (int j = 0; j < 3; j++)
-			{
-				glm::mat4 model = glm::mat4(1.0f);
-				model = glm::translate(model, get_translation_vector(vertices, i));
-				model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
-				model = glm::translate(model, get_translation_vector(vertices, j));
-				model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
-
-				draw_triangle(vertices, shader, model);
-			}
-		}
+		glm::mat4 model = glm::mat4(1.0f);
+		draw_sierpinski_triangle(vertices, shader, model, 8);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -172,3 +156,32 @@ glm::vec3 get_translation_vector(glm::vec3* vertices, int index)
 	}
 	return translation_vector;
 }
+
+void draw_sierpinski_triangle(glm::vec3* vertices, Shader shader, glm::mat4 in_model, int depth)
+{
+	if (depth == 0)
+	{
+		glm::mat4 model = glm::mat4(1.0f);
+		draw_triangle(vertices, shader, model);
+		return;
+	}
+
+
+	for (int i = 0; i < 3; i++)
+	{
+		glm::mat4 model = in_model;
+		model = glm::translate(model, get_translation_vector(vertices, i));
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+		/* for (int j = 0; j < depth - 1; j++) */
+		/* { */
+		/* 	model = glm::translate(model, get_translation_vector(vertices, i)); */
+		/* 	model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f)); */
+		/* } */
+		/* glm::vec3 color = glm::vec3((float)(rand() % 1000) / 1000); */
+		/* std::cout << color.x << std::endl; */
+		/* shader.setVec3("uColor", color); */
+		draw_triangle(vertices, shader, model);
+		draw_sierpinski_triangle(vertices, shader, model, depth - 1);
+	}
+}
+

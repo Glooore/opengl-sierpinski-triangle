@@ -111,6 +111,10 @@ class Shader
 		{
 			glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat));
 		}
+		void setVec3(const std::string &name, const glm::vec3 vec) const
+		{
+			glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(vec));
+		}
 };
 
 #endif
